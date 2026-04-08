@@ -1,0 +1,46 @@
+{
+  "name": "medisonar-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "clsx": "^2.1.0",
+    "framer-motion": "^11.0.0",
+    "lucide-react": "^0.300.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.14.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^2.2.0",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@types/react-router-dom": "^5.3.3",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "jsdom": "^29.0.1",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8",
+    "vitest": "^4.1.2"
+  }
+}
