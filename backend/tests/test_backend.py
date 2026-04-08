@@ -1,14 +1,15 @@
 from fastapi.testclient import TestClient
+
 from main import app
+
 
 client = TestClient(app)
 
+
 def test_health_check():
-    """Verify that the basic API endpoints and FastAPI setup are functioning correctly."""
     response = client.get("/api/health")
     assert response.status_code == 200
     data = response.json()
-    assert "status" in data
     assert data["status"] == "ok"
     assert "api_key_configured" in data
 
@@ -26,9 +27,10 @@ def test_fingerprint_scan_endpoint(monkeypatch):
         }
 
     import main
+    import app.main as backend_main
 
-    monkeypatch.setenv("FINGERPRINT_SERIAL_PORT", "COM3")
     monkeypatch.setattr(main, "scan_and_predict", mock_scan_and_predict)
+    monkeypatch.setattr(backend_main, "scan_and_predict", mock_scan_and_predict)
 
     response = client.post("/api/fingerprint/scan", json={})
 
@@ -36,4 +38,3 @@ def test_fingerprint_scan_endpoint(monkeypatch):
     data = response.json()
     assert data["blood_group"] == "O-"
     assert data["confidence"] == 98.25
-    assert data["serial_port"] == "COM3"

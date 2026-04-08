@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useChatStore, type HealthProfile } from './store';
 import { scanFingerprintBloodGroup } from './api';
 import { motion } from 'framer-motion';
-import { ArrowLeft, UserCircle, Save, HeartPulse, Shield, MapPin, Pill, AlertTriangle, Calendar, Activity, MessageSquare, Weight, Ruler, Droplets, Fingerprint } from 'lucide-react';
+import { ArrowLeft, UserCircle, Save, HeartPulse, Shield, MapPin, Pill, AlertTriangle, Calendar, Activity, MessageSquare, Weight, Ruler, Droplets, Fingerprint, ScanFace } from 'lucide-react';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -260,6 +260,25 @@ export default function ProfilePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.16 }}
             >
+              <div className="mb-4 rounded-2xl border border-border bg-surface p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-textMuted">Vision Module</p>
+                    <h3 className="mt-1 text-base font-medium">Need the autism camera workflow?</h3>
+                    <p className="mt-2 text-sm text-textMuted">
+                      Open the dedicated vision page to use your laptop webcam or an external browser-detected camera.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate('/autism-screening')}
+                    className="flex shrink-0 items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm transition-colors hover:bg-surfaceLight"
+                  >
+                    <ScanFace className="w-4 h-4" />
+                    Open vision page
+                  </button>
+                </div>
+              </div>
+
               <button
                 onClick={handleSave}
                 className="w-full py-3.5 rounded-xl bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 active:scale-[0.99]"
@@ -271,6 +290,9 @@ export default function ProfilePage() {
 
             <p className="text-center text-[11px] text-textMuted font-medium tracking-wide pb-4">
               Your profile data stays local and is only used to personalize your MediSonar experience.
+            </p>
+            <p className="text-center text-[11px] text-textMuted font-medium tracking-wide pb-4">
+              Fingerprint blood-group output is experimental and should be verified with a standard test.
             </p>
           </div>
         </main>

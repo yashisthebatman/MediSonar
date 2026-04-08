@@ -1,60 +1,73 @@
-# Fingerprint Blood Group Scanner Setup
+# Fingerprint Blood Group Scanner
 
-MediSonar uses the existing ResNet model at:
+## Current Flow
+
+MediSonar uses the existing model at:
 
 `fingerprint-based-blood-group-detection-main/test/model_blood_group_detection_resnet.h5`
 
-It does not train a new model. The scan flow is:
+The system does not retrain that model. It:
 
-1. The profile page calls `POST /api/fingerprint/scan`.
-2. The backend talks to the R307S/R30x-compatible fingerprint module over serial.
-3. The scanner returns a raw grayscale fingerprint image.
-4. The backend resizes the image to `256x256`, applies ResNet preprocessing, and runs the saved `.h5` model.
-5. The predicted blood group fills the profile dropdown.
+1. Calls `POST /api/fingerprint/scan`
+2. Reads a fingerprint frame from an R30x/R307-compatible scanner over serial
+3. Converts the raw grayscale buffer into a temporary BMP
+4. Resizes to `256x256`
+5. Applies ResNet50 preprocessing
+6. Runs the saved Keras model and returns the predicted blood group
 
-## Backend Requirements
+## Backend File
 
-Install the updated backend requirements:
+Implementation now lives in:
 
-```powershell
-cd backend
-.\.venv\Scripts\pip.exe install -r requirements.txt
-```
+`backend/app/services/fingerprint.py`
 
-Set the Arduino COM port before starting FastAPI:
+## Hardware Logic Review Notes
+
+The scanner integration now includes a safer serial read loop so partial reads do not incorrectly fail mid-packet.
+
+Important behavior:
+
+- Auto-detects a likely serial device when possible
+- Accepts an explicit serial port override
+- Times out cleanly when no finger is detected
+- Deletes temporary image files after inference
+
+## Environment
+
+Set the serial port if auto-detection is not enough:
 
 ```powershell
 $env:FINGERPRINT_SERIAL_PORT="COM3"
-.\.venv\Scripts\uvicorn.exe main:app --reload
 ```
 
-Use the COM port shown by Arduino IDE or Windows Device Manager.
+Or put it in `backend/.env`.
 
-## Arduino Uno R3 Bridge
+## Arduino Bridge
 
-Upload this sketch:
+If you are using the Arduino serial bridge, upload:
 
 `hardware/arduino_uno_r307_bridge/r307_serial_bridge.ino`
 
-Wiring:
+Recommended wiring:
 
 - R307S TX -> Arduino pin 2
-- R307S RX -> Arduino pin 3 through a level shifter or divider if your module RX is not 5V tolerant
+- R307S RX -> Arduino pin 3 through a suitable level-shifting path if needed
 - R307S VCC -> 5V
 - R307S GND -> GND
 
-The sketch forwards bytes between USB serial and the scanner. Keep both serial links at `57600` baud unless your module is configured differently.
+Keep the baud rate aligned with your module and the backend request. The current default is `57600`.
 
 ## Test Without Hardware
 
-The endpoint can run the existing model against a local image path:
+You can verify the model path without the scanner:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/fingerprint/scan -ContentType 'application/json' -Body '{"test_image_path":"C:\\Users\\yvcha\\Desktop\\MediSonar\\fingerprint-based-blood-group-detection-main\\test\\O- blood group.BMP"}'
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:8000/api/fingerprint/scan `
+  -ContentType "application/json" `
+  -Body '{"test_image_path":"C:\\Users\\yvcha\\Desktop\\MediSonar\\fingerprint-based-blood-group-detection-main\\test\\O- blood group.BMP"}'
 ```
 
-That path is for software verification only; the UI scan button uses the hardware path.
+## Medical Warning
 
-## Important Caveat
-
-This is model-based prediction from a fingerprint image, not a clinical blood typing test. Treat the output as an experimental estimate and verify any medical decision with a standard blood group test.
+This is an experimental model estimate, not a clinical blood-group test. Any real use must be verified through standard medical testing.

@@ -43,16 +43,18 @@ interface ChatState {
 }
 
 const firstSessionId = 'session_1';
-const welcomeMsg: Message = {
+
+const welcomeMessage: Message = {
   id: '1',
   role: 'assistant',
-  content: 'Welcome to **MediSonar** 👋\n\nI\'m your AI health assistant. I can help you:\n\n- 🔍 **Analyze symptoms** and suggest possible causes\n- 🏥 **Find specialists** near your location\n- 📋 **Generate health reports** from our conversation\n- 💊 **Provide personalized guidance** based on your health profile\n\nHow can I help you today?'
+  content:
+    "Welcome to **MediSonar**.\n\nI'm your AI health assistant. I can help you:\n\n- Analyze symptoms and suggest possible causes\n- Find specialists near your location\n- Generate health reports from our conversation\n- Provide personalized guidance based on your health profile\n\nHow can I help you today?",
 };
 
 const defaultSession: ChatSession = {
   id: firstSessionId,
   title: 'New Chat',
-  messages: [welcomeMsg],
+  messages: [welcomeMessage],
   createdAt: Date.now(),
 };
 
@@ -69,6 +71,13 @@ const emptyProfile: HealthProfile = {
   bloodGroup: '',
 };
 
+const createWelcomeMessage = (): Message => ({
+  id: `w_${Date.now()}`,
+  role: 'assistant',
+  content:
+    "Welcome to **MediSonar**.\n\nHow can I help you today? Describe your symptoms or health concerns and I'll do my best to assist.",
+});
+
 export const useChatStore = create<ChatState>()(
   persist(
     (set) => ({
@@ -78,15 +87,11 @@ export const useChatStore = create<ChatState>()(
       sidebarOpen: true,
       healthProfile: emptyProfile,
       createSession: () => {
-        const id = 'session_' + Date.now().toString();
+        const id = `session_${Date.now()}`;
         const newSession: ChatSession = {
           id,
           title: 'New Chat',
-          messages: [{
-            id: 'w_' + Date.now(),
-            role: 'assistant',
-            content: 'Welcome to **MediSonar** 👋\n\nHow can I help you today? Describe your symptoms or health concerns and I\'ll do my best to assist.'
-          }],
+          messages: [createWelcomeMessage()],
           createdAt: Date.now(),
         };
         set((state) => ({
@@ -97,35 +102,30 @@ export const useChatStore = create<ChatState>()(
       setActiveSession: (id) => set({ activeSessionId: id }),
       deleteSession: (id) =>
         set((state) => {
-          const remaining = state.sessions.filter((s) => s.id !== id);
+          const remaining = state.sessions.filter((session) => session.id !== id);
           if (remaining.length === 0) {
             const newSession: ChatSession = {
-              id: 'session_' + Date.now().toString(),
+              id: `session_${Date.now()}`,
               title: 'New Chat',
-              messages: [{
-                id: 'w_' + Date.now(),
-                role: 'assistant',
-                content: 'Welcome to **MediSonar** 👋\n\nHow can I help you today? Describe your symptoms or health concerns and I\'ll do my best to assist.'
-              }],
+              messages: [createWelcomeMessage()],
               createdAt: Date.now(),
             };
             return { sessions: [newSession], activeSessionId: newSession.id };
           }
+
           const nextActive =
             state.activeSessionId === id ? remaining[remaining.length - 1].id : state.activeSessionId;
           return { sessions: remaining, activeSessionId: nextActive };
         }),
       addMessage: (msg) =>
         set((state) => {
-          const sessions = state.sessions.map((s) => {
-            if (s.id === state.activeSessionId) {
-              const updated = { ...s, messages: [...s.messages, msg] };
-              if (s.title === 'New Chat' && msg.role === 'user') {
-                updated.title = msg.content.length > 28 ? msg.content.slice(0, 28) + '...' : msg.content;
-              }
-              return updated;
+          const sessions = state.sessions.map((session) => {
+            if (session.id !== state.activeSessionId) return session;
+            const updated = { ...session, messages: [...session.messages, msg] };
+            if (session.title === 'New Chat' && msg.role === 'user') {
+              updated.title = msg.content.length > 28 ? `${msg.content.slice(0, 28)}...` : msg.content;
             }
-            return s;
+            return updated;
           });
           return { sessions };
         }),
@@ -141,6 +141,6 @@ export const useChatStore = create<ChatState>()(
         healthProfile: state.healthProfile,
         sidebarOpen: state.sidebarOpen,
       }),
-    }
-  )
+    },
+  ),
 );
