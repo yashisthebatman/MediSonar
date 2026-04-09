@@ -2,11 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Activity,
   AlertCircle,
   AlertTriangle,
-  ArrowRight,
-  Calendar,
+  ChevronRight,
   HeartPulse,
   Info,
   MapPin,
@@ -14,17 +12,19 @@ import {
   RefreshCw,
   ScanFace,
   Shield,
-  UserCircle,
+  User,
 } from 'lucide-react';
 
 import { getAdvisories, type Advisory, type AdvisoriesResponse } from './api';
 import { useChatStore } from './store';
 
-const severityConfig: Record<string, { color: string; bg: string; icon: ReactNode; border: string }> = {
-  high: { color: 'text-red-400', bg: 'bg-red-400/10', icon: <AlertTriangle className="h-4 w-4" />, border: 'border-red-400/20' },
-  medium: { color: 'text-amber-400', bg: 'bg-amber-400/10', icon: <AlertCircle className="h-4 w-4" />, border: 'border-amber-400/20' },
-  low: { color: 'text-blue-400', bg: 'bg-blue-400/10', icon: <Info className="h-4 w-4" />, border: 'border-blue-400/20' },
-  info: { color: 'text-textMuted', bg: 'bg-surfaceLight', icon: <Shield className="h-4 w-4" />, border: 'border-border' },
+const ADVISORY_STORAGE_PREFIX = 'medisonar-advisories::';
+
+const severityConfig: Record<string, { color: string; bg: string; icon: ReactNode }> = {
+  high: { color: 'text-destructive', bg: 'bg-red-50', icon: <AlertTriangle className="h-5 w-5 text-destructive" /> },
+  medium: { color: 'text-orange-600', bg: 'bg-orange-50', icon: <AlertCircle className="h-5 w-5 text-orange-500" /> },
+  low: { color: 'text-amber-600', bg: 'bg-amber-50', icon: <Info className="h-5 w-5 text-amber-500" /> },
+  info: { color: 'text-primary', bg: 'bg-blue-50', icon: <Shield className="h-5 w-5 text-primary" /> },
 };
 
 function AdvisoryCard({ advisory, index }: { advisory: Advisory; index: number }) {
@@ -32,28 +32,28 @@ function AdvisoryCard({ advisory, index }: { advisory: Advisory; index: number }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.08 }}
-      className={`rounded-xl border bg-surface p-4 transition-colors hover:bg-surfaceLight/50 ${config.border}`}
+      transition={{ duration: 0.4, delay: index * 0.05, ease: [0.16, 1, 0.3, 1] }}
+      className="cupertino-card"
     >
-      <div className="flex items-start gap-3">
-        <div className={`mt-0.5 shrink-0 rounded-lg p-1.5 ${config.bg} ${config.color}`}>{config.icon}</div>
+      <div className="flex items-start gap-4">
+        <div className={`shrink-0 p-3 rounded-2xl ${config.bg}`}>{config.icon}</div>
         <div className="min-w-0 flex-1">
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <h4 className="text-sm font-medium text-textMain">{advisory.title}</h4>
-            <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${config.bg} ${config.color}`}>
-              {advisory.severity}
-            </span>
+          <div className="mb-1 flex items-center justify-between">
+            <h4 className="text-base font-semibold text-textMain">{advisory.title}</h4>
           </div>
-          <p className="text-xs leading-relaxed text-textMuted">{advisory.description}</p>
+          <p className="text-[15px] leading-relaxed text-textMuted">{advisory.description}</p>
           {(advisory.source || advisory.url) && (
-            <div className="mt-3 text-[11px] text-textMuted">
-              {advisory.source && <span>{advisory.source}</span>}
+             <div className="mt-4 flex items-center gap-3 text-sm text-textMuted">
+              {advisory.source && <span className="font-medium">{advisory.source}</span>}
               {advisory.url && (
-                <a href={advisory.url} target="_blank" rel="noreferrer" className="ml-2 text-primary underline underline-offset-2">
-                  Source
-                </a>
+                <>
+                  <span className="w-1 h-1 rounded-full bg-border" />
+                  <a href={advisory.url} target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">
+                    Learn more
+                  </a>
+                </>
               )}
             </div>
           )}
@@ -68,37 +68,31 @@ function DashboardCard({
   description,
   icon,
   onClick,
-  features,
 }: {
   title: string;
   description: string;
   icon: ReactNode;
   onClick: () => void;
-  features: string[];
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex cursor-pointer flex-col justify-between rounded-2xl border border-border bg-surface p-6 transition-all hover:bg-surfaceLight/30"
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="cupertino-card cupertino-card-hoverable"
       onClick={onClick}
     >
-      <div>
-        <div className="mb-5 flex items-center justify-between">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-textMuted">{title}</h3>
-          <ArrowRight className="h-4 w-4 text-textMuted transition-all hover:translate-x-1 hover:text-primary" />
-        </div>
-        <div className="mb-5">
-          <div className="mb-3 text-primary">{icon}</div>
-          <p className="text-sm leading-relaxed text-textMuted">{description}</p>
-        </div>
-      </div>
-      <div className="space-y-2">
-        {features.map((feature) => (
-          <div key={feature} className="rounded-lg border border-border bg-background p-2.5 text-xs text-textMuted">
-            {feature}
-          </div>
-        ))}
+      <div className="flex flex-col h-full">
+         <div className="mb-4 text-primary bg-primary/10 w-12 h-12 rounded-2xl flex items-center justify-center">
+            {icon}
+         </div>
+         <h3 className="text-xl font-semibold text-textMain mb-2">{title}</h3>
+         <p className="text-[15px] leading-relaxed text-textMuted flex-1">{description}</p>
+         
+         <div className="mt-6 flex items-center text-primary font-medium text-[15px] group">
+            Open tool
+            <ChevronRight className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" />
+         </div>
       </div>
     </motion.div>
   );
@@ -114,12 +108,51 @@ export default function Dashboard() {
     expires_at: undefined,
   });
   const [loadingAdvisories, setLoadingAdvisories] = useState(true);
+  const [advisoryError, setAdvisoryError] = useState('');
+
+  const advisoryStorageKey = `${ADVISORY_STORAGE_PREFIX}${healthProfile.location?.trim().toLowerCase() || 'none'}::${healthProfile.conditions?.trim().toLowerCase() || 'none'}`;
+
+  const readStoredAdvisories = (): AdvisoriesResponse | null => {
+    const raw = localStorage.getItem(advisoryStorageKey);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as AdvisoriesResponse;
+    } catch {
+      return null;
+    }
+  };
+
+  const writeStoredAdvisories = (data: AdvisoriesResponse) => {
+    if (data.advisories.length === 0) return;
+    localStorage.setItem(advisoryStorageKey, JSON.stringify(data));
+  };
 
   const loadAdvisories = async (forceRefresh = false) => {
     setLoadingAdvisories(true);
+    setAdvisoryError('');
+    if (!forceRefresh) {
+      const stored = readStoredAdvisories();
+      if (stored) {
+        setAdvisoryState(stored);
+      }
+    }
     try {
       const data = await getAdvisories(healthProfile.location, healthProfile.conditions, forceRefresh);
-      setAdvisoryState(data);
+      setAdvisoryError(data.error || '');
+      if (data.advisories.length > 0) {
+        setAdvisoryState(data);
+        writeStoredAdvisories(data);
+      } else {
+        const stored = readStoredAdvisories();
+        if (stored) {
+          setAdvisoryState(stored);
+        } else {
+          setAdvisoryState(data);
+        }
+      }
+    } catch (error) {
+      console.error('Advisory loading failed:', error);
+      setAdvisoryError('Local advisories unavailable at this time.');
     } finally {
       setLoadingAdvisories(false);
     }
@@ -132,184 +165,170 @@ export default function Dashboard() {
 
   const profileFilled = healthProfile.name || healthProfile.age || healthProfile.conditions;
   const totalChats = sessions.length;
-  const healthTags = [
-    ...(healthProfile.conditions ? healthProfile.conditions.split(',').map((value) => value.trim()).filter(Boolean) : []),
-    ...(healthProfile.allergies ? healthProfile.allergies.split(',').map((value) => value.trim()).filter(Boolean) : []),
-  ];
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background font-sans text-textMain">
+    <div className="flex h-screen w-screen overflow-hidden bg-background text-textMain font-sans select-none">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex shrink-0 items-center justify-between border-b border-border bg-surface p-5">
+        {/* Top Header */}
+        <header className="glass-header flex shrink-0 items-center justify-between px-6 lg:px-10 py-4">
           <div className="flex items-center gap-3">
-            <HeartPulse className="h-5 w-5 text-primary" />
-            <h1 className="text-base font-medium tracking-wide">MediSonar</h1>
+            <div className="bg-primary text-white p-2 rounded-2xl shadow-sm">
+              <HeartPulse className="h-5 w-5" strokeWidth={2} />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight leading-none mb-0.5">MediSonar</h1>
+              <p className="text-[13px] text-textMuted font-medium">Health Intelligence</p>
+            </div>
           </div>
-          <div className="flex items-center rounded-full border border-border bg-surfaceLight px-3 py-1.5 text-[11px] text-textMuted">
-            <span className="mr-2 h-1.5 w-1.5 rounded-full bg-green-500" />
-            AI Active
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+            <span className="hidden sm:inline text-sm font-medium text-textMuted">System Active</span>
           </div>
         </header>
 
-        <main className="custom-scrollbar flex-1 overflow-y-auto p-6 lg:p-10">
-          <div className="mx-auto max-w-6xl space-y-8">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <h2 className="text-2xl font-light tracking-wide">Welcome back{healthProfile.name ? `, ${healthProfile.name}` : ''}</h2>
-              <p className="mt-1 text-sm text-textMuted">Your health dashboard, grounded advisories, and vision tools.</p>
+        <main className="custom-scrollbar flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12">
+          <div className="mx-auto max-w-6xl space-y-12">
+            
+            {/* Greeting Section */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="pt-4">
+              <h2 className="text-4xl sm:text-5xl font-semibold tracking-tight text-textMain">
+                Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}
+                {healthProfile.name ? `, ${healthProfile.name.split(' ')[0]}` : ''}.
+              </h2>
+              <p className="mt-3 text-lg text-textMuted font-medium max-w-2xl">
+                Here's your regional health update and tool access.
+              </p>
             </motion.div>
 
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_1fr_1fr]">
+            {/* Main Cards Grid */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              
+              {/* Profile Summary Card */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="cursor-pointer rounded-2xl border border-border bg-surface p-6 transition-all hover:bg-surfaceLight/30"
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="cupertino-card cupertino-card-hoverable flex flex-col"
                 onClick={() => navigate('/profile')}
               >
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-xs font-medium uppercase tracking-wider text-textMuted">Your Profile</h3>
-                  <ArrowRight className="h-4 w-4 text-textMuted transition-all hover:translate-x-1 hover:text-primary" />
-                </div>
-
-                <div className="mb-5 flex items-center gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border bg-surfaceLight">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-50 text-primary data-[filled=true]:bg-primary data-[filled=true]:text-white">
                     {profileFilled ? (
-                      <span className="text-lg font-medium text-primary">{(healthProfile.name || 'U').charAt(0).toUpperCase()}</span>
+                      <span className="text-2xl font-semibold">{(healthProfile.name || 'U').charAt(0).toUpperCase()}</span>
                     ) : (
-                      <UserCircle className="h-6 w-6 text-textMuted" />
+                       <User className="h-6 w-6" strokeWidth={2} />
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-medium">{healthProfile.name || 'Set your name'}</p>
-                    <p className="mt-0.5 text-xs text-textMuted">{profileFilled ? 'Profile active' : 'Tap to complete'}</p>
+                  <div>
+                    <h3 className="text-xl font-semibold">{healthProfile.name || 'Set up profile'}</h3>
+                    <p className="text-sm text-textMuted">{profileFilled ? 'All systems nominal' : 'Action required'}</p>
                   </div>
                 </div>
 
-                <div className="mb-4 grid grid-cols-3 gap-2">
-                  {[
-                    { label: 'Age', value: healthProfile.age },
-                    { label: 'Gender', value: healthProfile.gender },
-                    { label: 'Location', value: healthProfile.location },
-                  ].map((field) => (
-                    <div key={field.label} className="rounded-lg border border-border bg-background p-2.5">
-                      <p className="mb-0.5 text-[10px] uppercase tracking-wider text-textMuted">{field.label}</p>
-                      <p className="truncate text-xs font-medium">{field.value || '-'}</p>
-                    </div>
-                  ))}
+                <div className="space-y-4 flex-1">
+                  <div className="flex justify-between items-center py-2 border-b border-black/[0.04]">
+                     <span className="text-sm text-textMuted">Location</span>
+                     <span className="text-sm font-medium">{healthProfile.location || 'Unknown'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-black/[0.04]">
+                     <span className="text-sm text-textMuted">Vitals Base</span>
+                     <span className="text-sm font-medium">
+                       {healthProfile.age ? `${healthProfile.age}y` : '--'} - {healthProfile.gender || '--'}
+                     </span>
+                  </div>
+                   <div className="flex justify-between items-center py-2">
+                     <span className="text-sm text-textMuted">Consultations</span>
+                     <span className="text-sm font-medium">{totalChats} logs</span>
+                  </div>
                 </div>
 
-                {healthTags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {healthTags.slice(0, 4).map((tag) => (
-                      <span key={tag} className="rounded-full border border-border bg-surfaceLight px-2 py-0.5 text-[11px] text-textMuted">
-                        {tag}
-                      </span>
-                    ))}
-                    {healthTags.length > 4 && <span className="text-[11px] text-textMuted">+{healthTags.length - 4} more</span>}
-                  </div>
-                )}
-
-                <div className="mt-5 flex items-center gap-4 border-t border-border pt-4">
-                  <div className="flex items-center gap-1.5 text-xs text-textMuted">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    <span>{totalChats} chats</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-textMuted">
-                    <Activity className="h-3.5 w-3.5" />
-                    <span>{profileFilled ? 'Active' : 'Incomplete'}</span>
-                  </div>
+                <div className="mt-4 flex items-center text-primary font-medium text-[15px] group">
+                    View settings
+                    <ChevronRight className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" />
                 </div>
               </motion.div>
 
               <DashboardCard
-                title="AI Consultation"
-                description="Describe symptoms, attach images, get grounded responses, and pull specialist recommendations into the chat flow."
-                icon={<HeartPulse className="h-9 w-9" />}
+                title="Consultation"
+                description="Securely chat about symptoms, get AI triage advice, and find local specialists grounded by live data."
+                icon={<MessageSquare className="h-6 w-6" strokeWidth={2} />}
                 onClick={() => navigate('/chat')}
-                features={[
-                  'AI-powered symptom analysis',
-                  'Profile-aware replies and chat memory',
-                  'Grounded specialist search results',
-                ]}
               />
 
               <DashboardCard
-                title="Autism Vision"
-                description="Run the provided ResNet50 checkpoint on webcam or uploaded face images through a dedicated browser camera workflow."
-                icon={<ScanFace className="h-9 w-9" />}
+                title="Autism Vision Check"
+                description="Use your device's camera for an advanced ResNet50 vision checkpoint analyzing facial expressions."
+                icon={<ScanFace className="h-6 w-6" strokeWidth={2} />}
                 onClick={() => navigate('/autism-screening')}
-                features={[
-                  'Laptop webcam capture',
-                  'External camera / Photon selection',
-                  'Research-only model confidence view',
-                ]}
               />
             </div>
 
+            {/* Advisories Section */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.16 }}
-              className="rounded-2xl border border-border bg-surface p-6"
+              transition={{ delay: 0.1, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-textMuted" />
-                  <h3 className="text-xs font-medium uppercase tracking-wider text-textMuted">
-                    Health Advisories
-                    {healthProfile.location && <span className="ml-1 text-[11px] font-normal text-textMuted">for {healthProfile.location}</span>}
-                  </h3>
+              <div className="mb-6 flex flex-wrap items-end justify-between gap-6 px-2">
+                <div>
+                  <h3 className="text-2xl font-semibold tracking-tight text-textMain">Local Health Advisories</h3>
+                  <p className="mt-1 flex items-center gap-2 text-sm text-textMuted">
+                    <MapPin className="h-4 w-4" />
+                    {healthProfile.location || 'Location not set'}
+                  </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 text-[11px] text-textMuted">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                  </div>
-                  <span>{advisoryState.cached ? 'Cached result' : 'Fresh search'}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[13px] text-textMuted font-medium bg-black/[0.04] px-3 py-1.5 rounded-full">
+                    {advisoryState.cached ? 'Cached' : 'Live updates'}
+                  </span>
                   <button
                     onClick={() => loadAdvisories(true)}
-                    className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 transition-colors hover:bg-surfaceLight"
+                    className="apple-button-secondary py-1.5"
                   >
-                    <RefreshCw className="h-3 w-3" />
-                    Refresh now
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
                   </button>
                 </div>
               </div>
 
-              <div className="mb-5 rounded-2xl border border-border bg-background/50 p-4 text-sm text-textMuted">
-                Advisories are cached for 20 minutes to keep the dashboard fast and resilient when grounded search is slow or temporarily inconsistent.
-              </div>
-
               {loadingAdvisories ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="flex items-center gap-2 text-sm text-textMuted">
-                    {[0, 0.2, 0.4].map((delay) => (
-                      <motion.div
-                        key={delay}
-                        className="h-2 w-2 rounded-full bg-textMuted"
-                        animate={{ y: [0, -5, 0] }}
-                        transition={{ duration: 0.6, repeat: Infinity, delay }}
-                      />
-                    ))}
+                <div className="flex items-center justify-center py-20">
+                  <div className="flex flex-col items-center gap-4 text-textMuted">
+                    <RefreshCw className="h-8 w-8 animate-spin opacity-50" />
+                    <span className="text-[15px] font-medium">Fetching advisories...</span>
                   </div>
                 </div>
               ) : advisoryState.advisories.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <AnimatePresence>
                     {advisoryState.advisories.map((advisory, index) => (
                       <AdvisoryCard key={`${advisory.title}-${index}`} advisory={advisory} index={index} />
                     ))}
                   </AnimatePresence>
                 </div>
+              ) : advisoryError ? (
+                <div className="bg-red-50 rounded-3xl p-8 text-center">
+                  <AlertTriangle className="mx-auto mb-3 h-8 w-8 text-destructive" />
+                  <p className="text-[15px] font-medium text-destructive">{advisoryError}</p>
+                </div>
               ) : (
-                <div className="py-12 text-center text-sm text-textMuted">
-                  <p>Fill in your location in your health profile for personalized advisories.</p>
+                <div className="bg-white/50 border border-black/[0.04] rounded-[24px] p-16 text-center">
+                  <Shield className="mx-auto mb-4 h-10 w-10 text-primary opacity-50" />
+                  <h4 className="text-lg font-semibold text-textMain mb-2">No active advisories</h4>
+                  <p className="text-[15px] text-textMuted max-w-md mx-auto">
+                    There are no current health advisories matching your location and profile data. 
+                    Set a location in your profile to enable live tracking.
+                  </p>
+                  <button onClick={() => navigate('/profile')} className="apple-button mt-6">
+                    Update Profile
+                  </button>
                 </div>
               )}
             </motion.div>
 
-            <p className="pb-4 text-center text-[11px] font-medium tracking-wide text-textMuted">
-              MediSonar can make mistakes. Always verify critical medical advice.
+            <p className="pb-10 pt-4 text-center text-[13px] font-medium text-textMuted opacity-70">
+              Not for clinical diagnosis. Consult a verified physician.
             </p>
           </div>
         </main>

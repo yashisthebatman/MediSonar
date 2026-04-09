@@ -60,49 +60,52 @@ function renderWithRouter(initialRoute = '/chat') {
 describe('Dashboard page', () => {
   test('renders welcome message', async () => {
     renderWithRouter('/');
-    expect(await screen.findByText(/Welcome back/)).toBeInTheDocument();
+    expect(await screen.findByText("Here's your regional health update and tool access.")).toBeInTheDocument();
   });
 
   test('renders profile tile', async () => {
     renderWithRouter('/');
-    expect(await screen.findByText('Your Profile')).toBeInTheDocument();
-    expect(await screen.findByText('Set your name')).toBeInTheDocument();
+    expect(await screen.findByText('Set up profile')).toBeInTheDocument();
+    expect(await screen.findByText('Action required')).toBeInTheDocument();
   });
 
   test('renders consultation and autism cards', async () => {
     renderWithRouter('/');
-    expect(await screen.findByText('AI Consultation')).toBeInTheDocument();
-    expect(await screen.findByText('Autism Vision')).toBeInTheDocument();
+    expect(await screen.findByText('Consultation')).toBeInTheDocument();
+    expect(await screen.findByText('Autism Vision Check')).toBeInTheDocument();
   });
 
   test('renders health advisories section', async () => {
     renderWithRouter('/');
-    expect(await screen.findByText(/Health Advisories/)).toBeInTheDocument();
-    expect(await screen.findByText(/cached for 20 minutes/i)).toBeInTheDocument();
+    expect(await screen.findByText('Local Health Advisories')).toBeInTheDocument();
+    expect(await screen.findByText('Location not set')).toBeInTheDocument();
   });
 });
 
 describe('Profile page', () => {
   test('renders profile page header', async () => {
     renderWithRouter('/profile');
-    expect(await screen.findByText('Health Profile')).toBeInTheDocument();
+    expect(await screen.findByText('Profile')).toBeInTheDocument();
   });
 
   test('renders scan and save controls', async () => {
     renderWithRouter('/profile');
-    expect(await screen.findByRole('button', { name: /Scan/i })).toBeInTheDocument();
-    expect(await screen.findByText('Save Profile')).toBeInTheDocument();
-    expect(await screen.findByText('Open vision page')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Scan Reader/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Done' })).toBeInTheDocument();
+    expect(await screen.findByText('Vision Module')).toBeInTheDocument();
   });
 
   test('can fill and save profile', async () => {
     renderWithRouter('/profile');
-    fireEvent.change(await screen.findByPlaceholderText('John Doe'), { target: { value: 'Yash' } });
-    fireEvent.change(await screen.findByPlaceholderText('30'), { target: { value: '25' } });
-    fireEvent.click(await screen.findByText('Save Profile'));
-    expect(screen.getByText('Saved!')).toBeInTheDocument();
-    expect(useChatStore.getState().healthProfile.name).toBe('Yash');
-    expect(useChatStore.getState().healthProfile.age).toBe('25');
+    fireEvent.change(await screen.findByPlaceholderText('John Appleseed'), { target: { value: 'Yash' } });
+    const numberInputs = await screen.findAllByRole('spinbutton');
+    fireEvent.change(numberInputs[0], { target: { value: '25' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Done' }));
+
+    await waitFor(() => {
+      expect(useChatStore.getState().healthProfile.name).toBe('Yash');
+      expect(useChatStore.getState().healthProfile.age).toBe('25');
+    });
   });
 
   test('can scan and fill blood group', async () => {
@@ -113,10 +116,10 @@ describe('Profile page', () => {
     });
 
     renderWithRouter('/profile');
-    fireEvent.click(await screen.findByRole('button', { name: /Scan/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Scan Reader/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Detected O- with 98.25% confidence.')).toBeInTheDocument();
+      expect(screen.getByText(/Match found: O-/)).toBeInTheDocument();
     });
     expect(screen.getByDisplayValue('O-')).toBeInTheDocument();
   });
@@ -125,8 +128,8 @@ describe('Profile page', () => {
 describe('Chat page', () => {
   test('renders sidebar with chat history', async () => {
     renderWithRouter('/chat');
-    expect((await screen.findAllByRole('button', { name: /New Chat/i })).length).toBeGreaterThanOrEqual(1);
-    expect(await screen.findByText('Previous Chats')).toBeInTheDocument();
+    expect((await screen.findAllByRole('button', { name: /New Consultation/i })).length).toBeGreaterThanOrEqual(1);
+    expect(await screen.findByText('Recents')).toBeInTheDocument();
   });
 
   test('renders message input', async () => {

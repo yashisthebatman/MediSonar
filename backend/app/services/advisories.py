@@ -23,7 +23,7 @@ class AdvisoryService:
         normalized_location = location.strip()
         normalized_conditions = conditions.strip()
         if len(normalized_location) < 2:
-            return AdvisoriesResponse(advisories=[])
+            return AdvisoriesResponse(advisories=[], error="Add a city or region in your profile to load local advisories.")
 
         if not force_refresh:
             cached = self.store.get_advisories_cache(normalized_location, normalized_conditions)
@@ -33,6 +33,7 @@ class AdvisoryService:
                     cached=True,
                     fetched_at=cached["fetched_at"].isoformat(),
                     expires_at=cached["expires_at"].isoformat(),
+                    error="",
                 )
 
         fresh = self._fetch_advisories(normalized_location, normalized_conditions)
@@ -46,35 +47,73 @@ class AdvisoryService:
                 cached=True,
                 fetched_at=stale["fetched_at"].isoformat(),
                 expires_at=stale["expires_at"].isoformat(),
+                error=fresh.error,
             )
-        return AdvisoriesResponse(advisories=[])
+
+        return fresh
 
     def _fetch_advisories(self, location: str, conditions: str) -> AdvisoriesResponse:
         client = self.ai_service.get_client()
+        condition_hint = (
+            f"Pay extra attention to risks that matter for these conditions: {conditions}. "
+            if conditions.strip()
+            else ""
+        )
         system_instruction = (
-            "You are a health advisory research assistant. Search the live web and return only current, real "
-            "health advisories from official public-health or government sources relevant to the user's area.\n\n"
-            "Output requirements:\n"
-            "- Return only a JSON array\n"
-            "- Each item must contain title, severity, description, source, url\n"
-            "- severity must be one of: high, medium, low, info\n"
-            "- description must be 35 to 90 words and explain the health risk and the practical action\n"
-            "- Prefer agencies like CDC, WHO, NIH, local health departments, national weather services, EPA, and food safety authorities\n"
-            "- If there are no credible current advisories, return []\n"
-            f"- Location: {location}\n"
-            f"- User conditions to prioritize when relevant: {conditions or 'None'}"
+            "Search the web for the latest official health advisories for one location and return only JSON.\n"
+            "Use official sources when possible such as government health departments, CDC, WHO, EPA, weather services, and food safety agencies.\n"
+            "Prefer advisories that are active now or were updated very recently.\n"
+            "Return a JSON array only.\n"
+            "Each item must contain: title, severity, description, source, url.\n"
+            "Severity must be one of: high, medium, low, info.\n"
+            "Keep descriptions short and practical.\n"
+            "If there are no credible current advisories, return []."
         )
-        response = client.models.generate_content(
-            model=self.settings.grounded_model,
-            contents=(
-                f"Find current official health advisories for {location}. "
-                "Return a JSON array with title, severity, description, source, and url."
-            ),
-            config=self.ai_service.grounded_search_config(system_instruction),
+        prompt = (
+            f"Today is {_utc_now().date().isoformat()}. "
+            f"Find 3 to 5 latest official health advisories for {location}. "
+            f"{condition_hint}"
+            "Focus on alerts people in that area should know right now such as outbreaks, air quality, extreme heat, flood risk, vaccination notices, or food/water safety notices. "
+            "Return only a JSON array with title, severity, description, source, and url."
         )
-        advisories = self._normalize_advisories(extract_json_array(response.text or ""))
+        try:
+            response = client.models.generate_content(
+                model=self.settings.grounded_model,
+                contents=prompt,
+                config=self.ai_service.grounded_search_config(system_instruction, max_output_tokens=1024),
+            )
+            raw_text = self.ai_service.extract_text(response)
+        except Exception as exc:
+            return AdvisoriesResponse(advisories=[], error=f"Grounded advisory search failed: {exc}")
+
+        advisories = self._normalize_advisories(extract_json_array(raw_text))
+        if not advisories and raw_text:
+            try:
+                advisories = self._normalize_advisories(
+                    extract_json_array(
+                        self.ai_service.extract_text(
+                            client.models.generate_content(
+                                model=self.settings.chat_model,
+                                contents=(
+                                    "Convert the following grounded-search notes into a JSON array only. "
+                                    "Each item must contain title, severity, description, source, and url.\n\n"
+                                    f"{raw_text}"
+                                ),
+                                config=self.ai_service.standard_config(
+                                    "Return only a valid JSON array. Do not include markdown.",
+                                    max_output_tokens=768,
+                                ),
+                            )
+                        )
+                    )
+                )
+            except Exception:
+                advisories = []
         if not advisories:
-            return AdvisoriesResponse(advisories=[])
+            return AdvisoriesResponse(
+                advisories=[],
+                error="No credible current advisories were returned for that region. Try refreshing in a moment.",
+            )
 
         fetched_at = _utc_now()
         expires_at = fetched_at + timedelta(seconds=self.settings.advisories_cache_ttl_seconds)
@@ -85,6 +124,7 @@ class AdvisoryService:
             cached=False,
             fetched_at=fetched_at.isoformat(),
             expires_at=expires_at.isoformat(),
+            error="",
         )
 
     def _normalize_advisories(self, items: list[dict]) -> list[AdvisoryItem]:
@@ -122,20 +162,47 @@ class SpecialistService:
 
         client = self.ai_service.get_client()
         system_instruction = (
-            "You are a medical specialist finder. Search the web for real doctors, hospitals, and clinics.\n"
+            "Search for real doctors, hospitals, and clinics for the requested condition and location.\n"
             "Return only a JSON array. Each item must include name, specialty, address, phone, rating, notes.\n"
-            "Use grounded search and do not invent data.\n"
-            f"Condition: {disease}\n"
-            f"Location: {location}"
+            "Prioritize nearby real providers with enough detail to contact them.\n"
+            "Do not invent data."
+        )
+        prompt = (
+            f"Find 3 to 5 real specialists, clinics, or hospitals for {disease} near {location}. "
+            "Include the provider name, specialty, address, phone if available, rating if available, and one short note. "
+            "Return JSON only."
         )
         response = client.models.generate_content(
             model=self.settings.grounded_model,
-            contents=f"Find specialists for {disease} near {location}. Return JSON only.",
-            config=self.ai_service.grounded_search_config(system_instruction),
+            contents=prompt,
+            config=self.ai_service.grounded_search_config(system_instruction, max_output_tokens=1024),
         )
 
+        raw_text = self.ai_service.extract_text(response)
+        parsed = extract_json_array(raw_text)
+        if not parsed and raw_text:
+            try:
+                parsed = extract_json_array(
+                    self.ai_service.extract_text(
+                        client.models.generate_content(
+                            model=self.settings.chat_model,
+                            contents=(
+                                "Convert these grounded-search notes into a JSON array only. "
+                                "Each item must include name, specialty, address, phone, rating, and notes.\n\n"
+                                f"{raw_text}"
+                            ),
+                            config=self.ai_service.standard_config(
+                                "Return only a valid JSON array. Do not include markdown.",
+                                max_output_tokens=768,
+                            ),
+                        )
+                    )
+                )
+            except Exception:
+                parsed = []
+
         specialists: list[dict] = []
-        for item in extract_json_array(response.text or ""):
+        for item in parsed:
             if not isinstance(item, dict) or not item.get("name"):
                 continue
             specialists.append(
@@ -149,4 +216,3 @@ class SpecialistService:
                 }
             )
         return specialists[:5]
-

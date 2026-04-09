@@ -25,7 +25,7 @@ def _ensure_data_dir() -> None:
 @dataclass(frozen=True)
 class Settings:
     gemini_api_key: str
-    chat_model: str = "gemini-2.5-flash-lite"
+    chat_model: str = "gemma-4-31b-it"
     grounded_model: str = "gemini-2.5-flash"
     advisories_cache_ttl_seconds: int = 20 * 60
     fingerprint_serial_port: str = ""

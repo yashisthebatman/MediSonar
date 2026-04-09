@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { MapPin, Phone, Star, Stethoscope } from 'lucide-react';
+import { MapPin, Phone, Star, ChevronRight } from 'lucide-react';
 
 export interface Specialist {
   name: string;
@@ -10,43 +10,45 @@ export interface Specialist {
   notes?: string;
 }
 
-function SpecialistCard({ specialist }: { specialist: Specialist }) {
+function SpecialistCard({ specialist, isLast }: { specialist: Specialist; isLast: boolean }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="specialist-card"
-    >
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surfaceLight">
-          <Stethoscope className="h-4 w-4 text-primary" />
+    <div className={`py-4 group cursor-pointer ${!isLast ? 'border-b border-black/[0.06]' : ''}`}>
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-primary">
+          <span className="text-[17px] font-semibold">{specialist.name.charAt(0)}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <h4 className="text-sm font-medium text-textMain">{specialist.name}</h4>
-          <p className="mt-0.5 text-xs text-primary">{specialist.specialty}</p>
-          {specialist.address && (
-            <div className="mt-1.5 flex items-center gap-1.5 text-xs text-textMuted">
-              <MapPin className="h-3 w-3 shrink-0" />
-              <span className="truncate">{specialist.address}</span>
+          <div className="flex items-baseline justify-between">
+             <h4 className="text-[16px] font-semibold text-textMain group-hover:text-primary transition-colors">{specialist.name}</h4>
+             <ChevronRight className="h-4 w-4 text-textMuted opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
+          </div>
+          <p className="text-[14px] text-textMuted font-medium mt-0.5">{specialist.specialty}</p>
+
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+            {specialist.address && (
+              <div className="flex items-start gap-1.5 text-[13px] text-textMuted">
+                <MapPin className="h-4 w-4 shrink-0 -mt-0.5" />
+                <span className="truncate max-w-[200px]">{specialist.address}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              {specialist.phone && (
+                <div className="flex items-center gap-1.5 text-[13px] text-primary font-medium hover:underline">
+                  <Phone className="h-4 w-4" />
+                  <span>{specialist.phone}</span>
+                </div>
+              )}
+              {specialist.rating && (
+                <div className="flex items-center gap-1 text-[13px] text-amber-500 font-medium">
+                  <Star className="h-4 w-4 fill-amber-500" />
+                  <span>{specialist.rating}</span>
+                </div>
+              )}
             </div>
-          )}
-          <div className="mt-1.5 flex items-center gap-3">
-            {specialist.phone && (
-              <div className="flex items-center gap-1 text-xs text-textMuted">
-                <Phone className="h-3 w-3" />
-                <span>{specialist.phone}</span>
-              </div>
-            )}
-            {specialist.rating && (
-              <div className="flex items-center gap-1 text-xs text-amber-400">
-                <Star className="h-3 w-3" />
-                <span>{specialist.rating}</span>
-              </div>
-            )}
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -57,22 +59,29 @@ export function SpecialistResults({ specialists }: { specialists: Specialist[] }
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="flex w-full justify-start"
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="flex w-full justify-start mb-6"
     >
-      <div className="mr-3 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surfaceLight">
-        <Stethoscope className="h-4 w-4 text-primary" />
-      </div>
-      <div className="max-w-[85%] space-y-2 sm:max-w-[75%]">
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-textMuted">
-          <MapPin className="h-3 w-3" /> Specialists Near You
-        </p>
-        {specialists.map((specialist, index) => (
-          <SpecialistCard key={`${specialist.name}-${index}`} specialist={specialist} />
-        ))}
-        <p className="mt-2 text-[11px] italic text-textMuted">
-          Results come from grounded search. Please verify details before visiting.
-        </p>
+      <div className="w-full max-w-[85%] sm:max-w-[75%]">
+         <div className="bg-white rounded-[24px] shadow-apple border border-black/[0.04] overflow-hidden">
+            <div className="bg-surfaceLight px-5 py-3 border-b border-black/[0.04] flex items-center gap-2">
+               <MapPin className="h-4 w-4 text-primary" />
+               <span className="text-[13px] font-semibold text-textMain">Recommended Specialists</span>
+               <span className="ml-auto bg-black/[0.06] text-textMuted px-2 py-0.5 rounded-full text-[11px] font-semibold">
+                 {specialists.length} Nearby
+               </span>
+            </div>
+            
+            <div className="px-5">
+              {specialists.map((specialist, index) => (
+                <SpecialistCard 
+                   key={`${specialist.name}-${index}`} 
+                   specialist={specialist} 
+                   isLast={index === specialists.length - 1}
+                />
+              ))}
+            </div>
+         </div>
       </div>
     </motion.div>
   );

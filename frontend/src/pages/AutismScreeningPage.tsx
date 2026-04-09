@@ -3,13 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertTriangle,
-  ArrowLeft,
-  Camera,
+  ChevronLeft,
   ImagePlus,
   Loader2,
   RefreshCw,
   ScanFace,
-  ShieldAlert,
 } from 'lucide-react';
 
 import { predictAutismFromImage, type AutismPredictionResponse } from '../api';
@@ -68,7 +66,7 @@ export default function AutismScreeningPage() {
       await loadDevices();
     } catch (error) {
       console.error(error);
-      setCameraError('Camera access failed. Check browser permissions or choose a different external camera.');
+      setCameraError('Camera access denied. Please check permissions.');
     }
   };
 
@@ -91,7 +89,7 @@ export default function AutismScreeningPage() {
       setResult(response);
       setCapturedImage(imageBase64);
     } catch (error: any) {
-      const message = error?.response?.data?.detail || 'Autism model inference failed.';
+      const message = error?.response?.data?.detail || 'Analysis could not be completed.';
       setCameraError(message);
     } finally {
       setLoading(false);
@@ -124,175 +122,195 @@ export default function AutismScreeningPage() {
   };
 
   return (
-    <div className="custom-scrollbar h-screen overflow-y-auto bg-background text-textMain">
-      <div className="mx-auto max-w-6xl p-6 lg:p-10">
-        <header className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-border bg-surface px-6 py-5">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/')} className="rounded-xl border border-border p-2 transition-colors hover:bg-surfaceLight">
-              <ArrowLeft className="h-5 w-5 text-textMuted" />
-            </button>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-textMuted">Experimental Vision Module</p>
-              <h1 className="mt-1 text-2xl font-semibold">Autism Screening Camera</h1>
-            </div>
-          </div>
-          <div className="rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-xs text-amber-300">
-            Research demo only, not a diagnosis
-          </div>
+    <div className="flex h-screen w-screen bg-background font-sans text-textMain selection:bg-primary/20 overflow-hidden">
+      
+      <div className="flex-1 flex flex-col relative overflow-hidden">
+        {/* Header */}
+        <header className="glass-header flex items-center justify-between px-4 sm:px-8 py-3">
+          <button onClick={() => navigate('/')} className="flex items-center gap-1.5 text-primary hover:opacity-80 transition-opacity font-medium">
+             <ChevronLeft className="w-5 h-5 -ml-1.5" strokeWidth={2.5} />
+             <span className="hidden sm:inline">Back</span>
+          </button>
+          
+          <h2 className="font-semibold absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+             Vision Checkpoint
+          </h2>
+
+          <div className="w-[60px]" /> {/* Spacer for centering */}
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-          <section className="space-y-5 rounded-3xl border border-border bg-surface p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-textMuted">Camera Input</p>
-                <h2 className="mt-1 text-lg font-medium">Use your laptop webcam or any browser-detected external camera</h2>
+        {/* Content */}
+        <main className="custom-scrollbar flex-1 overflow-y-auto px-4 sm:px-8 pb-12 pt-6">
+          <div className="max-w-5xl mx-auto grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+            
+            {/* Left Column: Camera View */}
+            <section className="space-y-6">
+              
+              <div className="relative rounded-[24px] overflow-hidden bg-black shadow-apple border border-black/[0.04] aspect-[4/3] sm:aspect-video flex items-center justify-center group">
+                 {/* Top floating controls */}
+                 <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="bg-black/40 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center gap-2 text-white text-[13px] font-medium">
+                       <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+                       Sensor Live
+                    </div>
+
+                    <button
+                      onClick={() => startCamera(selectedDeviceId || undefined)}
+                      className="bg-black/40 backdrop-blur-md text-white rounded-full p-2 hover:bg-black/60 transition-colors"
+                      title="Reset Camera"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </button>
+                 </div>
+
+                 {/* Video Stream */}
+                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+
+                 {/* Bottom Floating Controls (Camera shutter style) */}
+                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-6 z-10">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="bg-black/30 backdrop-blur-md border border-white/20 text-white rounded-full p-4 hover:bg-black/50 transition-colors active:scale-95"
+                    >
+                      <ImagePlus className="h-5 w-5" />
+                    </button>
+
+                    <button
+                      onClick={captureFrame}
+                      disabled={loading}
+                      className="w-[72px] h-[72px] rounded-full border-[4px] border-white/40 flex items-center justify-center group/shutter hover:border-white/60 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                       <div className={`w-[56px] h-[56px] rounded-full bg-white transition-all ${loading ? 'scale-75 opacity-80 flex items-center justify-center' : 'group-active/shutter:scale-90 group-hover/shutter:opacity-90'}`}>
+                          {loading && <Loader2 className="h-6 w-6 text-black animate-spin" />}
+                       </div>
+                    </button>
+
+                    <div className="w-[52px] h-[52px]" /> {/* Spacer to balance */}
+                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => startCamera(selectedDeviceId || undefined)}
-                  className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm transition-colors hover:bg-surfaceLight"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Restart camera
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm transition-colors hover:bg-surfaceLight"
-                >
-                  <ImagePlus className="h-4 w-4" />
-                  Upload image
-                </button>
+
+              {/* Camera Picker Below */}
+              <div className="flex items-center gap-4 px-2">
+                 <select
+                  value={selectedDeviceId}
+                  onChange={async (event) => {
+                    const nextId = event.target.value;
+                    setSelectedDeviceId(nextId);
+                    await startCamera(nextId);
+                  }}
+                  className="bg-surface border border-black/[0.04] rounded-[14px] px-4 py-2.5 text-[15px] font-medium outline-none text-textMain cursor-pointer flex-1 shadow-sm focus:border-primary/50"
+                 >
+                  {devices.map((device, index) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `Camera ${index + 1}`}
+                    </option>
+                  ))}
+                 </select>
               </div>
-            </div>
 
-            <div className="overflow-hidden rounded-3xl border border-border bg-black">
-              <video ref={videoRef} autoPlay playsInline muted className="aspect-video w-full object-cover" />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <select
-                value={selectedDeviceId}
-                onChange={async (event) => {
-                  const nextId = event.target.value;
-                  setSelectedDeviceId(nextId);
-                  await startCamera(nextId);
-                }}
-                className="min-w-[220px] rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none"
-              >
-                {devices.map((device, index) => (
-                  <option key={device.deviceId} value={device.deviceId}>
-                    {device.label || `Camera ${index + 1}`}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                onClick={captureFrame}
-                disabled={loading}
-                className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-black transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                Capture and classify
-              </button>
+              {cameraError && (
+                <div className="flex items-center gap-3 bg-red-50 text-destructive p-4 rounded-[16px] text-[14px] font-medium">
+                  <AlertTriangle className="h-5 w-5 shrink-0" />
+                  <span>{cameraError}</span>
+                </div>
+              )}
 
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
-            </div>
+              <canvas ref={canvasRef} className="hidden" />
+            </section>
 
-            <div className="rounded-2xl border border-border bg-background/60 p-4 text-sm text-textMuted">
-              <p className="font-medium text-textMain">Photon / external camera note</p>
-              <p className="mt-1">
-                If your Photon setup appears to the browser as a webcam stream, select it from the camera list above and run the same capture flow.
-              </p>
-            </div>
-
-            {cameraError && (
-              <div className="flex items-start gap-3 rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{cameraError}</span>
-              </div>
-            )}
-
-            <canvas ref={canvasRef} className="hidden" />
-          </section>
-
-          <section className="space-y-5">
-            <div className="rounded-3xl border border-border bg-surface p-5">
-              <div className="flex items-center gap-3">
-                <div className="rounded-2xl bg-surfaceLight p-3">
-                  <ScanFace className="h-5 w-5 text-primary" />
+            {/* Right Column: Analysis Panel */}
+            <section className="space-y-6">
+              
+              <div className="cupertino-card h-full flex flex-col">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-primary/10 text-primary p-2 rounded-xl">
+                    <ScanFace className="h-5 w-5" strokeWidth={2} />
+                  </div>
+                  <div>
+                     <h2 className="text-xl font-semibold">Diagnosis Result</h2>
+                     <p className="text-[14px] text-textMuted font-medium tracking-tight">AI Confidence Mapping</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-textMuted">Inference Output</p>
-                  <h2 className="mt-1 text-lg font-medium">Latest classification</h2>
-                </div>
+
+                <AnimatePresence mode="wait">
+                  {result ? (
+                    <motion.div
+                      key={result.label}
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      className="flex-1 flex flex-col"
+                    >
+                      {capturedImage && (
+                        <div className="rounded-[16px] overflow-hidden mb-6 shadow-sm border border-black/[0.04]">
+                           <img src={capturedImage} alt="Captured frame" className="h-32 w-full object-cover" />
+                        </div>
+                      )}
+
+                      <div className="bg-surfaceLight rounded-[16px] p-5 mb-6 text-center border border-black/[0.02]">
+                         <p className="text-[13px] font-medium text-textMuted mb-1">Primary Indicator</p>
+                         <p className={`text-4xl font-semibold tracking-tight ${result.label === 'Autistic' ? 'text-primary' : 'text-textMain'}`}>
+                           {result.label}
+                         </p>
+                         <div className="mt-4 inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-full shadow-sm text-[13px] font-semibold text-textMain border border-black/[0.04]">
+                            Confidence Score <span className="text-primary ml-1">{result.confidence.toFixed(2)}%</span>
+                         </div>
+                      </div>
+
+                      <div className="space-y-4 mb-6">
+                         <div className="bg-surfaceLight p-4 rounded-[16px] border border-black/[0.02]">
+                           <div className="flex justify-between items-center mb-2">
+                             <span className="text-[14px] font-medium text-textMain">Autistic Pattern Matching</span>
+                             <span className="text-[14px] font-semibold text-primary">{result.autistic_probability.toFixed(1)}%</span>
+                           </div>
+                           <div className="h-2 bg-black/[0.06] rounded-full overflow-hidden">
+                             <motion.div 
+                               initial={{ width: 0 }} 
+                               animate={{ width: `${result.autistic_probability}%` }} 
+                               transition={{ duration: 1, ease: "easeOut" }}
+                               className="h-full bg-primary rounded-full shadow-[0_0_8px_rgba(0,102,204,0.4)]"
+                             />
+                           </div>
+                         </div>
+                         
+                         <div className="bg-surfaceLight p-4 rounded-[16px] border border-black/[0.02]">
+                           <div className="flex justify-between items-center mb-2">
+                             <span className="text-[14px] font-medium text-textMain">Neurotypical Baseline</span>
+                             <span className="text-[14px] font-medium text-textMuted">{result.non_autistic_probability.toFixed(1)}%</span>
+                           </div>
+                           <div className="h-2 bg-black/[0.06] rounded-full overflow-hidden">
+                             <motion.div 
+                               initial={{ width: 0 }} 
+                               animate={{ width: `${result.non_autistic_probability}%` }} 
+                               transition={{ duration: 1, ease: "easeOut" }}
+                               className="h-full bg-textMuted/40 rounded-full" 
+                             />
+                           </div>
+                         </div>
+                      </div>
+
+                      <div className="mt-auto bg-amber-50 text-amber-600 p-4 rounded-[16px] text-[13px] font-medium leading-relaxed">
+                          <span className="font-semibold block mb-1">Disclaimer</span>
+                          {result.disclaimer}
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-black/[0.06] rounded-[20px] p-8 text-center bg-surfaceLight/50">
+                      <ScanFace className="w-12 h-12 text-textMuted/30 mb-4" />
+                      <p className="text-[15px] font-medium text-textMuted max-w-[200px]">
+                          Capture a frame using the camera to begin analysis.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              <AnimatePresence mode="wait">
-                {result ? (
-                  <motion.div
-                    key={result.label}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -12 }}
-                    className="mt-5 space-y-4"
-                  >
-                    {capturedImage && (
-                      <img src={capturedImage} alt="Captured frame" className="h-48 w-full rounded-2xl object-cover" />
-                    )}
+            </section>
 
-                    <div className="rounded-2xl border border-border bg-background p-4">
-                      <p className="text-sm text-textMuted">Predicted label</p>
-                      <p className="mt-1 text-2xl font-semibold">{result.label}</p>
-                      <p className="mt-2 text-sm text-textMuted">Confidence: {result.confidence.toFixed(2)}%</p>
-                    </div>
+          </div>
+        </main>
 
-                    <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
-                      <div>
-                        <div className="mb-1 flex items-center justify-between text-sm">
-                          <span>Autistic probability</span>
-                          <span>{result.autistic_probability.toFixed(2)}%</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-surfaceLight">
-                          <div className="h-2 rounded-full bg-rose-400" style={{ width: `${result.autistic_probability}%` }} />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="mb-1 flex items-center justify-between text-sm">
-                          <span>Non-autistic probability</span>
-                          <span>{result.non_autistic_probability.toFixed(2)}%</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-surfaceLight">
-                          <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${result.non_autistic_probability}%` }} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">
-                      <div className="flex items-start gap-3">
-                        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                        <span>{result.disclaimer}</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-5 rounded-2xl border border-dashed border-border p-6 text-sm text-textMuted">
-                    Capture a webcam frame or upload a face image to run the model.
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <div className="rounded-3xl border border-border bg-surface p-5">
-              <p className="text-xs uppercase tracking-[0.2em] text-textMuted">Clinical Safety</p>
-              <ul className="mt-3 space-y-3 text-sm text-textMuted">
-                <li>This interface runs the provided Kaggle-derived ResNet50 checkpoint as a software demonstration.</li>
-                <li>Autism cannot be clinically diagnosed from a single webcam image, so this result must never be treated as medical advice.</li>
-                <li>Use this only for model experimentation and consult qualified professionals for any real assessment.</li>
-              </ul>
-            </div>
-          </section>
-        </div>
       </div>
     </div>
   );

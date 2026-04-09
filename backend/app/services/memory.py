@@ -101,6 +101,23 @@ class MemoryStore:
         conn.commit()
         conn.close()
 
+    def reset(self, clear_memory: bool = True, clear_advisories_cache: bool = True) -> bool:
+        conn = sqlite3.connect(self.db_path)
+        cur = conn.cursor()
+        cleared_any = False
+        if clear_memory:
+            cur.execute('DELETE FROM user_facts')
+            cleared_any = True
+        if clear_advisories_cache:
+            cur.execute('DELETE FROM advisories_cache')
+            cleared_any = True
+        conn.commit()
+        conn.close()
+        return cleared_any
+
+    def reset_all(self):
+        self.reset(clear_memory=True, clear_advisories_cache=True)
+
     def extract_and_save_facts(self, user_id: str, user_message: str, client) -> list[str]:
         prompt = (
             f"Analyze this user message: '{user_message}'\n"

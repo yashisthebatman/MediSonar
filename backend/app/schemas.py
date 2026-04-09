@@ -28,6 +28,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     memory_updates: list[str] = Field(default_factory=list)
+    specialist_query: str = ""
 
 
 class ChatWithFilesRequest(BaseModel):
@@ -62,6 +63,7 @@ class AdvisoriesResponse(BaseModel):
     cached: bool = False
     fetched_at: Optional[str] = None
     expires_at: Optional[str] = None
+    error: str = ""
 
 
 class SpecialistRequest(BaseModel):
@@ -80,6 +82,7 @@ class SpecialistItem(BaseModel):
 
 class SpecialistResponse(BaseModel):
     specialists: list[SpecialistItem] = Field(default_factory=list)
+    error: str = ""
 
 
 class FingerprintScanRequest(BaseModel):
@@ -114,3 +117,12 @@ class AutismPredictionResponse(BaseModel):
     model: str
     disclaimer: str
 
+
+class ResetSystemRequest(BaseModel):
+    clear_memory: bool = True
+    clear_advisories_cache: bool = True
+
+
+class ResetSystemResponse(BaseModel):
+    status: str
+    cleared_backend_db: bool = False

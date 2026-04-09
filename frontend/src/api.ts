@@ -15,6 +15,7 @@ export interface AdvisoriesResponse {
   cached: boolean;
   fetched_at?: string;
   expires_at?: string;
+  error?: string;
 }
 
 export interface AutismPredictionResponse {
@@ -28,13 +29,33 @@ export interface AutismPredictionResponse {
   disclaimer: string;
 }
 
+export interface ChatResponse {
+  response: string;
+  memory_updates: string[];
+  specialist_query?: string;
+}
+
+export interface Specialist {
+  name: string;
+  specialty: string;
+  address?: string;
+  phone?: string;
+  rating?: string;
+  notes?: string;
+}
+
+export interface SpecialistResponse {
+  specialists: Specialist[];
+  error?: string;
+}
+
 export const sendChatMessage = async (
   userId: string,
   message: string,
   healthProfile?: Record<string, string>,
   history?: { role: string; content: string }[],
 ) => {
-  const response = await axios.post(`${API_BASE}/chat`, {
+  const response = await axios.post<ChatResponse>(`${API_BASE}/chat`, {
     user_id: userId,
     message,
     health_profile: healthProfile || null,
@@ -50,7 +71,7 @@ export const sendChatWithFiles = async (
   files: { name: string; type: string; data: string }[],
   history?: { role: string; content: string }[],
 ) => {
-  const response = await axios.post(`${API_BASE}/chat/files`, {
+  const response = await axios.post<ChatResponse>(`${API_BASE}/chat/files`, {
     user_id: userId,
     message,
     health_profile: healthProfile || null,
@@ -85,7 +106,7 @@ export const getAdvisories = async (location: string, conditions: string, forceR
 };
 
 export const findSpecialists = async (disease: string, location: string) => {
-  const response = await axios.post(`${API_BASE}/specialists`, {
+  const response = await axios.post<SpecialistResponse>(`${API_BASE}/specialists`, {
     disease,
     location,
   });
@@ -115,4 +136,15 @@ export const predictAutismFromImage = async (
     camera_name: cameraName,
   });
   return response.data;
+};
+
+export const resetSystemData = async () => {
+  const response = await axios.post(`${API_BASE}/system/reset`, {
+    clear_memory: true,
+    clear_advisories_cache: true,
+  });
+  return response.data as {
+    status: string;
+    cleared_backend_db: boolean;
+  };
 };

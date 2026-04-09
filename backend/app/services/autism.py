@@ -4,6 +4,8 @@ import base64
 import io
 from functools import lru_cache
 
+import numpy as np
+
 from ..config import AUTISM_DIR
 
 
@@ -48,6 +50,27 @@ def _load_artifacts():
     return torch, model, transforms
 
 
+def _prepare_image(image):
+    grayscale = np.asarray(image.convert("L"), dtype=np.float32)
+    brightness = float(grayscale.mean())
+    contrast = float(grayscale.std())
+    horizontal_detail = float(np.abs(np.diff(grayscale, axis=1)).mean()) if grayscale.shape[1] > 1 else 0.0
+    vertical_detail = float(np.abs(np.diff(grayscale, axis=0)).mean()) if grayscale.shape[0] > 1 else 0.0
+    detail_score = (horizontal_detail + vertical_detail) / 2.0
+    quality_notes: list[str] = []
+
+    if brightness < 12:
+        raise AutismModelError("The image is too dark for a usable prediction. Use brighter lighting and try again.")
+    if brightness < 28:
+        quality_notes.append("Low lighting may reduce reliability.")
+    if contrast < 10:
+        quality_notes.append("Low contrast may reduce reliability.")
+    if detail_score < 3:
+        quality_notes.append("Blur or motion may reduce reliability.")
+
+    return image, quality_notes
+
+
 def predict_autism_from_base64(image_base64: str) -> dict:
     try:
         from PIL import Image
@@ -65,7 +88,7 @@ def predict_autism_from_base64(image_base64: str) -> dict:
     torch, model, transforms = _load_artifacts()
 
     with Image.open(io.BytesIO(raw)) as img:
-        image = img.convert("RGB")
+        image, quality_notes = _prepare_image(img.convert("RGB"))
 
     tensor = transforms(image).unsqueeze(0)
     with torch.inference_mode():
@@ -73,12 +96,18 @@ def predict_autism_from_base64(image_base64: str) -> dict:
         autistic_probability = float(torch.sigmoid(logits).item())
 
     predicted_index = 1 if autistic_probability >= 0.5 else 0
+    label = LABELS[predicted_index]
     confidence = autistic_probability if predicted_index == 1 else 1.0 - autistic_probability
+
     return {
-        "label": LABELS[predicted_index],
+        "label": label,
         "confidence": round(confidence * 100, 2),
         "autistic_probability": round(autistic_probability * 100, 2),
         "non_autistic_probability": round((1.0 - autistic_probability) * 100, 2),
         "model": str(AUTISM_MODEL_PATH),
-        "disclaimer": DISCLAIMER,
+        "disclaimer": (
+            DISCLAIMER
+            if not quality_notes
+            else f"{DISCLAIMER} Image quality note: {' '.join(quality_notes)}"
+        ),
     }

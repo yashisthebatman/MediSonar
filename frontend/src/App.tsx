@@ -10,7 +10,8 @@ export default function App() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen w-screen items-center justify-center bg-background text-sm text-textMuted">
+        <div className="flex flex-col h-screen w-screen items-center justify-center bg-[#F5F5F7] text-[15px] font-medium text-[#86868B] font-sans">
+          <div className="w-8 h-8 rounded-full border-2 border-black/[0.05] border-t-blue-500 animate-spin mb-4" />
           Loading MediSonar...
         </div>
       }
